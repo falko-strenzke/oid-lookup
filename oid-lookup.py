@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
 """
-oid_lookup.py - Schlaegt eine OID (Punktnotation) auf https://oid-base.com nach.
+oid_lookup.py - Looks up an OID (dot notation) on https://oid-base.com
 
-Verwendung:
+Usage:
     python3 oid_lookup.py <OID>
 
-Beispiel:
+Example:
     python3 oid_lookup.py 1.3.6.1.4.1.259.10.1.24.1.5.6.6.1
     ->
     iso(1) identified-organization(3) dod(6) internet(1) private(4) enterprise(1) 259 edgecorenetworks(10) edgeCoreNetworksMgt(1) ecs4510MIB(24) ecs4510MIBObjects(1) staMgt(5) xstMgt(6) mstInstanceEditTable(6) mstInstanceEditEntry(1)
     mstInstanceEditEntry
 
-Es wird die Seite https://oid-base.com/get/<OID> abgerufen. Die Webseite
-enthaelt den vollen, benannten Pfad der OID u.a. im <title>-Tag in der Form:
+The page https://oid-base.com/get/<OID> is fetched. The web page contains
+the full, named path of the OID, among other places, in the <title> tag
+in the form:
 
     OID repository - <oid> = {iso(1) identified-organization(3) ... name(n)}
 
-Dieser Pfad wird per Regex extrahiert. Schlaegt die Extraktion fehl (z.B.
-weil die OID nicht in der Datenbank vorhanden ist, oder bei einem Netzwerk-
-/HTTP-Fehler), erzeugt das Skript KEINE Ausgabe und beendet sich mit dem
-Exit Code -1.
+This path is extracted via regex. If the extraction fails (e.g. because
+the OID is not present in the database, or due to a network/HTTP error),
+the script produces NO output and exits with exit code -1.
 
-Hinweis: POSIX-Exit-Codes sind auf ein Byte begrenzt. sys.exit(-1) wird vom
-Betriebssystem daher als Exit Code 255 sichtbar (Standardverhalten von
-Python/Unix, technisch bedingt durch die Limitierung auf 0-255).
+Note: POSIX exit codes are limited to one byte. sys.exit(-1) is therefore
+seen by the operating system as exit code 255 (standard Python/Unix
+behavior, due to the 0-255 limitation).
 """
 
 import html
@@ -36,24 +36,24 @@ BASE_URL = "https://oid-base.com/get/"
 USER_AGENT = "Mozilla/5.0 (compatible; oid-lookup-script/1.0)"
 TIMEOUT_SECONDS = 10
 
-# Extrahiert den vollen Pfad aus dem <title>-Tag:
-#   OID repository - <oid> = {<voller Pfad>}
+# Extracts the full path from the <title> tag:
+#   OID repository - <oid> = {<full path>}
 TITLE_RE = re.compile(
     r"<title>\s*OID repository\s*-\s*[\d.]+\s*=\s*\{(.*?)\}\s*</title>",
     re.IGNORECASE | re.DOTALL,
 )
 
-# Fallback: Extrahiert den vollen Pfad aus der Body-Stelle "OID: {<Pfad>}"
+# Fallback: extracts the full path from the body location "OID: {<path>}"
 BODY_RE = re.compile(r"\bOID:\s*\{([^}]*)\}", re.IGNORECASE)
 
-# Trennt das letzte Pfadelement in Name und Knotennummer, z.B.:
+# Splits the last path element into name and node number, e.g.:
 #   "mstInstanceEditTable(6)" -> ("mstInstanceEditTable", "6")
 LAST_ELEMENT_RE = re.compile(r"^(.*)\((\d+)\)$")
 
 
 def fetch_oid_page(oid):
-    """Laedt die OID-Seite herunter. Gibt den HTML-Quelltext zurueck,
-    oder None, falls die Seite nicht erfolgreich geladen werden konnte."""
+    """Downloads the OID page. Returns the HTML source, or None if the
+    page could not be loaded successfully."""
     url = BASE_URL + oid
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
@@ -67,9 +67,9 @@ def fetch_oid_page(oid):
 
 
 def extract_full_path(page_html):
-    """Extrahiert den vollen, benannten OID-Pfad aus dem HTML der Seite.
-    Gibt den Pfad-String zurueck, oder None, wenn die OID nicht gefunden
-    wurde bzw. das erwartete Format nicht vorliegt."""
+    """Extracts the full, named OID path from the page's HTML.
+    Returns the path string, or None if the OID was not found or the
+    expected format is not present."""
     match = TITLE_RE.search(page_html) or BODY_RE.search(page_html)
     if not match:
         return None
@@ -82,9 +82,9 @@ def extract_full_path(page_html):
 
 
 def lookup_oid(oid):
-    """Fuehrt das komplette Nachschlagen einer OID durch.
-    Gibt ein Tupel (voller_pfad, letztes_element_name) zurueck,
-    oder None, wenn die OID nicht gefunden werden konnte."""
+    """Performs the complete lookup of an OID.
+    Returns a tuple (full_path, last_element_name), or None if the OID
+    could not be found."""
     page_html = fetch_oid_page(oid)
     if page_html is None:
         return None
@@ -106,14 +106,14 @@ def lookup_oid(oid):
 
 def main():
     if len(sys.argv) != 2:
-        print(f"Verwendung: {sys.argv[0]} <OID in Punktnotation>", file=sys.stderr)
+        print(f"Usage: {sys.argv[0]} <OID in dot notation>", file=sys.stderr)
         return -1
 
     oid = sys.argv[1].strip()
 
     result = lookup_oid(oid)
     if result is None:
-        # OID nicht gefunden (oder Fehler beim Abruf): keine Ausgabe, Exit Code -1
+        # OID not found (or fetch error): no output, exit code -1
         return -1
 
     full_path, last_name = result
